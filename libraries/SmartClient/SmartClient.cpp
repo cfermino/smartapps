@@ -4,13 +4,15 @@ SMARTClient, a Smartapps client for Arduino
 
 @author         Fabio Costa Mangia <fabio.costa@smartapps.com.br>
 @contribution   Prof. Rodrigo M A Almeida <rodrigomax@unifei.edu.br>
-@contribution   José Wilker <jose.wilker@smartapps.com.br>
+@contribution   JosÃ© Wilker <jose.wilker@smartapps.com.br>
 
 Smartapps (http://www.smartapps.com.br) - Copyright 2013
 */
 
 #include "SmartClient.h"
 #include "Base642.h"
+#include <string.h>
+#include <stdio.h>
 
 bool SmartClient::connect(char hostname[], char login[], char pass[], int port) {
     bool result = true;
@@ -65,8 +67,8 @@ void SmartClient::sendSchema(char hostname[], char AuthID[]){
 }
 
 
-String SmartClient::getSchema(char hostname[], char login[], char pass[], int port){
-    String result = "";
+char* SmartClient::getSchema(char hostname[], char login[], char pass[], int port){
+    char* result;
     LOGIN = login;
     encrypt(login, pass);
     if (_client.connect(hostname, port)) {
@@ -78,12 +80,14 @@ String SmartClient::getSchema(char hostname[], char login[], char pass[], int po
     return  result;
 }
 
-String SmartClient::readSchema() {
+char* SmartClient::readSchema() {
     int maxAttempts = 300, attempts = 0;
     int time = millis();
     int n;
     int i;
-    String retorno;
+    char *retorno;
+    char* result;
+    char* resultJson;
     while(_client.available() == 0 && attempts < maxAttempts) {
         delay(100);
         attempts++;
@@ -91,14 +95,14 @@ String SmartClient::readSchema() {
     while(_client.available()) {
        readLine();
         if(posBuffer = 146){
-           for(i=110;i<142;i++){
-               if(readBuffer[i] != '\0'){
-                    retorno = retorno += readBuffer[i];
-               }
-            }
+           retorno = readBuffer;
         }
     }
-    return retorno;
+    resultJson = strstr(retorno,"[\"");
+    resultJson = strtok(resultJson,"[\"");
+   _client.stop();
+   _client.flush();
+    return resultJson;
 }
 
 
@@ -329,8 +333,6 @@ bool SmartClient::readHandshake() {
         }
     }
 
-    _client.flush();
-    _client.stop();
 
     #ifdef DEBUGPRINT
         Serial.print(F("Dados recebidos em [ms]: "));
@@ -342,7 +344,11 @@ bool SmartClient::readHandshake() {
         }
         Serial.println(PHPSESSID);
     #endif
+        Serial.flush();
+        _client.stop();
+        _client.flush();
     return result;
+
 }
 
 
@@ -369,7 +375,7 @@ String SmartClient::readResponse() {
         handshake += readBuffer + '\n';
     }
    //erial.println(readBuffer);
-    _client.stop();
+   
 }
 
 
@@ -398,20 +404,13 @@ void SmartClient::readLine() {
         readBuffer[posBuffer]= '\0';
     
     #endif
-
-    #ifdef DEBUGPRINT
-     // Serial.println("ultima linha : ");
-    //  Serial.println(readBuffer);
-    //rial.println(buff);
-    #endif
 }
-
-void SmartClient::send (bool GoP, char hostname[], char app[], char schema[], char caminho[], String PostData) {
+void SmartClient::send(char hostname[], char app[], char schema[], char caminho[], int variavel,int valor) {
    //DADOS A SEREM ENVIADOS!
     //_client.flush();
     String retorno;
     int i;
-    if(GoP==true){
+    
    if (_client.connect(hostname, 80)) {
 
     #ifdef DEBUGPRINT
@@ -432,32 +431,59 @@ void SmartClient::send (bool GoP, char hostname[], char app[], char schema[], ch
     _client.println(PHPSESSID);
     _client.println(F("Content-Type: application/x-www-form-urlencoded"));
     _client.print(F("Content-Length: "));
-    _client.println(PostData.length());
+    _client.println(30);
     _client.println();
-    _client.print(PostData);
+    _client.print("variavel=");
+    _client.print(variavel);
+    _client.print("&valor=");    
+    _client.print(valor);
     _client.println();
-    #ifdef DEBUGPRINT
-        Serial.println(F("Data Sent"));
-        Serial.println(PHPSESSID);
-    #endif
-    
-    readSendData();
     _client.stop();
-    //Serial.println(sizeof(readBuffer));
      }
-    }
-  //  Serial.print("Retorno : ");
-   //Serial.println(readBuffer);
+    
 }
 
 
-String SmartClient::readSendData() {
+
+
+void SmartClient::sendLastRegister(char hostname[], char AuthID[],char *api, char *from, char *schema, char *form, char *qtd,int field){
+        _client.print(F("GET /api/fp/from/"));
+        _client.print(api);
+        _client.print("/");
+        _client.print(schema);
+        _client.print("/");
+        _client.print(form);
+        _client.print(F("/_last/"));
+        _client.print(qtd);
+        _client.println(" HTTP/1.1");        
+        _client.print("Host: ");
+        _client.println(hostname);
+        _client.println("User-Agent: arduino-ethernet");
+        _client.print(F("Authorization: Basic "));
+        _client.println(AuthID);
+        _client.print(F("Cookie: PHPSESSID="));
+        _client.println(PHPSESSID);
+        _client.println();
+}
+
+
+char* SmartClient::getLastRegister(char hostname[], char login[], char pass[], char *api, char *from, char *schema, char *form, char *qtd,int field){
+    char* result;
+    LOGIN = login;
+    encrypt(login, pass);
+    if (_client.connect(hostname, 80)) {
+        sendLastRegister(hostname, AuthID,api,from,schema,form,qtd,field);
+       result = readLastRegister(field);
+    }
+    return  result;
+}
+
+char* SmartClient::readLastRegister(int field) {
     int maxAttempts = 300, attempts = 0;
     int time = millis();
     int n;
     int i;
-    int sucess;
-    String retorno;
+    char *retorno;
     while(_client.available() == 0 && attempts < maxAttempts) {
         delay(100);
         attempts++;
@@ -465,18 +491,46 @@ String SmartClient::readSendData() {
     while(_client.available()) {
         readLine();
         if(posBuffer > 110){
-           for(i=153;i<posBuffer;i++){
-               if(readBuffer[i] != '\0'){
-                    retorno = retorno += readBuffer[i];
-               }
-            }
+            retorno = readBuffer;
         }
     }
-   Serial.println(retorno);
-    return retorno;
+    char* resultJson;
+    resultJson = strstr(retorno,"variavel\"");
+    char *pch;
+    char *values[5];
+    char *value;
+    char *dateTime;
+    char *subDateTime;
+    i = 0;
+    pch = strtok(resultJson,",");
+    while(pch != NULL && pch != "\""){
+        values[i] = pch;
+        i++;
+        pch = strtok (NULL, ",");
+    }
+
+    switch (field){
+        case 1:
+            value = strtok(values[0],"\"variavel\":");    
+        break;
+        case 2:
+            value = strtok(values[1],"\"valor\":");    
+        break;
+        case 3:
+            value = strtok(values[2],"\"latitude\":");    
+        break;
+        case 4:
+            value = strtok(values[3],"\"longitude\":");    
+        break;
+        case 5:
+                value = strtok(values[4],"}");
+                value = strchr(value,':');
+                value = strchr(value,'0x22');
+                value = strtok(value,"\"");
+        break;
+    }
+    _client.stop();
+    _client.flush();
+    return value;
+
 }
-
-//<div style=\"border:1px solid #990000;padding-left:20px;margin:0 0 10px 0;\">\n\n<h4>A PHP Error was encountered<\/h4>\n\n<p>Severity: Notice<\/p>\n<p>Message:  Undefined index: valor<\/p>\n<p>Filename: _app\/controller.php<\/p>\n<p>Line Number: 95<\/p>\n\n<\/div>"} 
-//-1
-
-
