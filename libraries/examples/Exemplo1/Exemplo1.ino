@@ -1,18 +1,13 @@
 #include <SmartClient.h>
 #include <SPI.h>
 #include <Ethernet.h>
-//#include <Wire.h>
-//#include <LCDI2C.h>
-//LCDI2C lcd = LCDI2C(2,16,0x4C,1);   
-//Definicao endereco MAC do Ethernet Shield:
-//byte mac[] = {  0xDE, 0xAD, 0xBE, 0xEF, 0xFF, 0xED };
 byte mac[] = {  0xDE, 0xAD, 0xBE, 0xEF, 0xFF, 0xED };
 //Definicoes do usuário na Smartapps:
 char server[] = "www.smartapps.com.br";              //Endereco Smartapps.
-char login[] = "7a4e894ab12b917aeb0f33b7e61139b8";   //Login do usuario: Encontra-se na plataforma.
-char password[] = "AG8BPFRlUmtfNARmD28=";            //Senha do usuário: Encontra-se na plataforma.
+char login[] = "";   //Login do usuario: Encontra-se na plataforma.
+char password[] = "=";            //Senha do usuário: Encontra-se na plataforma.
 char app[] = "controls";                             //Nome do aplicativo utilizado.
-char schema[] = "7a4e894ab12b917aeb0f33b7e61139b8";  //Schema do aplicativo: Normalmente o mesmo do usuário, só muda se for utilizado um aplicativo que foi compartilhado por outro usuário, neste caso é o login do outro usuário.
+char schema[] = "";  //Schema do aplicativo: Normalmente o mesmo do usuário, só muda se for utilizado um aplicativo que foi compartilhado por outro usuário, neste caso é o login do outro usuário.
 char caminhoPost[] = "variaveis_valores/insert";
 char *appSchema;
 char *lastRegister;
